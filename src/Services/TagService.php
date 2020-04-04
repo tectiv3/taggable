@@ -6,13 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection as BaseCollection;
 
-
 /**
  * Class TagService
  */
 class TagService
 {
-
     /**
      * Find an existing tag by name.
      *
@@ -65,16 +63,17 @@ class TagService
                 PREG_SPLIT_NO_EMPTY
             );
         } else {
-
             throw new \ErrorException(
-                __CLASS__ . '::' . __METHOD__ . ' expects parameter 1 to be string, array or Collection; ' .
-                gettype($tags) . ' given'
+                __CLASS__ .
+                    '::' .
+                    __METHOD__ .
+                    ' expects parameter 1 to be string, array or Collection; ' .
+                    gettype($tags) .
+                    ' given'
             );
         }
 
-        return array_filter(
-            array_map('trim', $array)
-        );
+        return array_filter(array_map('trim', $array));
     }
 
     /**
@@ -182,7 +181,8 @@ class TagService
             $class = get_class($class);
         }
 
-        $sql = 'SELECT DISTINCT t.* FROM taggable_taggables tt LEFT JOIN taggable_tags t ON tt.tag_id=t.tag_id' .
+        $sql =
+            'SELECT DISTINCT t.* FROM taggables tt LEFT JOIN tags t ON tt.tag_id=t.id' .
             ' WHERE tt.taggable_type = ?';
 
         return Tag::fromQuery($sql, [$class]);
@@ -223,7 +223,8 @@ class TagService
      */
     public function getAllUnusedTags(): Collection
     {
-        $sql = 'SELECT t.* FROM taggable_tags t LEFT JOIN taggable_taggables tt ON tt.tag_id=t.tag_id ' .
+        $sql =
+            'SELECT t.* FROM tags t LEFT JOIN taggables tt ON tt.tag_id=t.id ' .
             'WHERE tt.taggable_id IS NULL';
 
         return Tag::fromQuery($sql);
@@ -238,18 +239,22 @@ class TagService
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getPopularTags(int $limit = null, $class = null, int $minCount = 1): Collection
-    {
-        $sql = 'SELECT t.*, COUNT(t.tag_id) AS taggable_count FROM taggable_tags t LEFT JOIN taggable_taggables tt ON tt.tag_id=t.tag_id';
+    public function getPopularTags(
+        int $limit = null,
+        $class = null,
+        int $minCount = 1
+    ): Collection {
+        $sql =
+            'SELECT t.*, COUNT(t.id) AS taggable_count FROM tags t LEFT JOIN taggables tt ON tt.tag_id=t.id';
         $bindings = [];
 
         if ($class) {
             $sql .= ' WHERE tt.taggable_type = ?';
-            $bindings[] = ($class instanceof Model) ? get_class($class) : $class;
+            $bindings[] = $class instanceof Model ? get_class($class) : $class;
         }
 
         // group by everything to handle strict and non-strict mode in MySQL
-        $sql .= ' GROUP BY t.tag_id, t.name, t.normalized, t.created_at, t.updated_at';
+        $sql .= ' GROUP BY t.id, t.name, t.normalized, t.created_at, t.updated_at';
 
         if ($minCount > 1) {
             $sql .= ' HAVING taggable_count >= ?';
@@ -279,15 +284,14 @@ class TagService
     {
         // If no class is specified, we can do the rename with a simple SQL update
         if ($class === null) {
-            return Tag::where('normalized', $this->normalize($oldName))
-                ->update([
-                    'name'       => $newName,
-                    'normalized' => $this->normalize($newName),
-                ]);
+            return Tag::where('normalized', $this->normalize($oldName))->update([
+                'name' => $newName,
+                'normalized' => $this->normalize($newName),
+            ]);
         }
 
         if (!($class instanceof Model)) {
-            $class = new $class;
+            $class = new $class();
         }
 
         // First find the old tag

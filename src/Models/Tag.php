@@ -5,30 +5,25 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
-
 /**
  * Class Tag
  */
 class Tag extends Model
 {
+    /**
+     * @inheritdoc
+     */
+    protected $table = 'tags';
 
     /**
      * @inheritdoc
      */
-    protected $table = 'taggable_tags';
+    protected $primaryKey = 'id';
 
     /**
      * @inheritdoc
      */
-    protected $primaryKey = 'tag_id';
-
-    /**
-     * @inheritdoc
-     */
-    protected $fillable = [
-        'name',
-        'normalized',
-    ];
+    protected $fillable = ['name', 'normalized'];
 
     /**
      * @inheritdoc
@@ -85,7 +80,7 @@ class Tag extends Model
         if ($relatedClass) {
             $relation = $this->taggedModels($relatedClass);
 
-            return tap($relation->getResults(), function($results) use ($key) {
+            return tap($relation->getResults(), function ($results) use ($key) {
                 $this->setRelation($key, $results);
             });
         }
@@ -101,7 +96,7 @@ class Tag extends Model
      */
     protected function taggedModels(string $class): MorphToMany
     {
-        return $this->morphedByMany($class, 'taggable', 'taggable_taggables', 'tag_id');
+        return $this->morphedByMany($class, 'taggable', 'taggables', 'id');
     }
 
     /**
@@ -123,5 +118,4 @@ class Tag extends Model
     {
         return (string) $this->getAttribute('name');
     }
-
 }
