@@ -1,40 +1,41 @@
 <?php namespace Cviebrock\EloquentTaggable\Models;
 
 use Cviebrock\EloquentTaggable\Services\TagService;
-use Illuminate\Database\Eloquent\Model as Eloquent;
-
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 /**
  * Class Tag
- *
- * @package Cviebrock\EloquentTaggable\Models
  */
-class Tag extends Eloquent
+class Tag extends Model
 {
+    /**
+     * @inheritdoc
+     */
+    protected $table = 'tags';
 
     /**
-     * The table associated with the model.
-     *
-     * @var string
+     * @inheritdoc
      */
-    protected $table = 'taggable_tags';
+    protected $primaryKey = 'id';
 
     /**
-     * The primary key for the model.
-     *
-     * @var string
+     * @inheritdoc
      */
-    protected $primaryKey = 'tag_id';
+    protected $fillable = ['name', 'normalized'];
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
+     * @inheritdoc
      */
-    protected $fillable = [
-        'name',
-        'normalized',
-    ];
+    public function __construct(array $attributes = [])
+    {
+        if ($connection = config('taggable.connection')) {
+            $this->setConnection($connection);
+        }
+
+        parent::__construct($attributes);
+    }
 
     /**
      * Set the name attribute on the model.
@@ -49,12 +50,72 @@ class Tag extends Eloquent
     }
 
     /**
-     * Convert the model to its string representation.
+     * Scope to find tags by name.
      *
-     * @return string
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param $value
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function __toString()
+    public function scopeByName(Builder $query, string $value): Builder
     {
-        return $this->getAttribute('name');
+        $normalized = app(TagService::class)->normalize($value);
+
+        return $query->where('normalized', $normalized);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getRelationValue($key)
+    {
+        // Check for regular relation first
+        if ($return = parent::getRelationValue($key)) {
+            return $return;
+        }
+
+        // Check if the relation is defined via configuration
+        $relatedClass = array_get(config('taggable.taggedModels'), $key);
+
+        if ($relatedClass) {
+            $relation = $this->taggedModels($relatedClass);
+
+            return tap($relation->getResults(), function ($results) use ($key) {
+                $this->setRelation($key, $results);
+            });
+        }
+    }
+
+    /**
+     * Get the inverse of the polymorphic relation, via an attribute
+     * defining the type of models to return.
+     *
+     * @param string $class
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphToMany
+     */
+    protected function taggedModels(string $class): MorphToMany
+    {
+        return $this->morphedByMany($class, 'taggable', 'taggables', 'id');
+    }
+
+    /**
+     * Find the tag with the given name.
+     *
+     * @param string $value
+     *
+     * @return static|null
+     */
+    public static function findByName(string $value)
+    {
+        return app(TagService::class)->find($value);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function __toString(): string
+    {
+        return (string) $this->getAttribute('name');
     }
 }

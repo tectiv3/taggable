@@ -1,6 +1,7 @@
 <?php namespace Cviebrock\EloquentTaggable\Test\Configuration;
 
 use Cviebrock\EloquentTaggable\Test\TestCase;
+use Cviebrock\EloquentTaggable\Test\TestModel;
 
 
 /**
@@ -9,6 +10,14 @@ use Cviebrock\EloquentTaggable\Test\TestCase;
 class CustomGlueTests extends TestCase
 {
 
+    /**
+     * @var TestModel
+     */
+    protected $testModel;
+
+    /**
+     * @inheritdoc
+     */
     protected function getEnvironmentSetUp($app)
     {
         parent::getEnvironmentSetUp($app);
@@ -17,24 +26,34 @@ class CustomGlueTests extends TestCase
     }
 
     /**
-     * Test tag list with custom glue
-     *
-     * @test
+     * @inheritdoc
      */
-    public function testCustomGlue()
+    public function setUp()
     {
-        $this->testModel->tag('Apple,Banana,Cherry');
-        $this->assertEquals('Apple.Banana.Cherry', $this->testModel->tagList);
+        parent::setUp();
+
+        $this->testModel = $this->newModel()->tag('Apple,Banana,Cherry');
     }
 
     /**
-     * Test normalized tag list with custom glue
-     *
-     * @test
+     * Test tag list with custom glue.
+     */
+    public function testCustomGlue()
+    {
+        $this->assertEquals(
+            'Apple.Banana.Cherry',
+            $this->testModel->getTagListAttribute()
+        );
+    }
+
+    /**
+     * Test normalized tag list with custom glue.
      */
     public function testCustomGlueNormalized()
     {
-        $this->testModel->tag('Apple,Banana,Cherry');
-        $this->assertEquals('apple.banana.cherry', $this->testModel->tagListNormalized);
+        $this->assertEquals(
+            'apple.banana.cherry',
+            $this->testModel->getTagListNormalizedAttribute()
+        );
     }
 }
