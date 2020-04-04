@@ -27,7 +27,7 @@ trait Taggable
             'taggable',
             'taggables',
             'taggable_id',
-            'id'
+            'tag_id'
         )->withTimestamps();
     }
 

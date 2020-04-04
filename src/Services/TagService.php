@@ -105,7 +105,7 @@ class TagService
         }
 
         return Tag::whereIn('normalized', $normalized)
-            ->pluck('tag_id')
+            ->pluck('id')
             ->toArray();
     }
 
